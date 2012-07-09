@@ -1,0 +1,45 @@
+mkdir -p $SCRATCH/Projects/tophat-1.3.1
+mkdir -p $SCRATCH/Projects/tophat-1.3.1/bin
+mkdir -p $SCRATCH/Projects/tophat-1.3.1/src
+cd $SCRATCH/Projects/tophat-1.3.1/bin/src
+wget "http://tophat.cbcb.umd.edu/downloads/tophat-1.3.1.Linux_x86_64.tar.gz"
+tar -zxvf tophat-1.3.1.Linux_x86_64.tar.gz
+chmod a+x tophat-1.3.1.Linux_x86_64/*
+mv tophat-1.3.1.Linux_x86_64 ../bin/
+
+wget "http://superb-sea2.dl.sourceforge.net/project/bowtie-bio/bowtie/0.12.7/bowtie-0.12.7-linux-x86_64.zip"
+unzip bowtie-0.12.7-linux-x86_64.zip
+cp bowtie-0.12.7/bowti* ../bin/
+
+svn co https://samtools.svn.sourceforge.net/svnroot/samtools/trunk/samtools
+cd samtools
+
+Needed to hard code TACC Zlib into Makefile @ -I and -L
+
+module swap pgi gcc
+module load zlib
+module load python/2.7.1
+make
+cp samtools ../../bin/
+
+# Develop a sample script that can perform the analysis if submitted interactively or via the queue
+## See tophat.sh
+# Replace hard-coded variables and paths with their equivalent form variables
+# Remove SGE headers and shebang
+# Remove module commands
+# Remove hard-coded iinit
+# Add line to tar -zxvf bin.tgz
+# chmod -R a+x bin/*
+# Compress bin folder
+## tar -czvf bin.tgz bin
+## rm -rf bin
+## See tophat.template
+# rm -rf src
+# Delete any genome, read, temp files from testing the application
+# Write up app.json
+## Validate with JSONLint
+## Make pretty using Cerny.js
+## Post to apps service
+### curl -X POST -sku "vaughn:********" -F "fileToUpload=@app.json" https://foundation.iplantc.org/apps-v1/apps
+# cd $SCRATCH/Projects
+# iput -rfT tophat-1.3.1 /iplant/home/vaughn/applications/

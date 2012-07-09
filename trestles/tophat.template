@@ -1,0 +1,79 @@
+
+QUERY1=${query1}
+QUERY2=${query2}
+GENOME=${genome}
+GTF=${annotation}
+
+Output_dir=./tophat_out
+Mate_inner_dist=${mate_inner_dist}
+Mate_std_dev=${mate_std_dev}
+Min_anchor_length=${min_anchor_length}
+Splice_mismatches=${splice_mismatches}
+Min_intron_length=${min_intron_length}
+Max_intron_length=${max_intron_length}
+Max_insertion_length=${max_insertion_length}
+Max_deletion_length=${max_deletion_length}
+Min_isoform_fraction=${min_isoform_fraction}
+Max_multihits=${max_multihits}
+Segment_length=${segment_length}
+Library_type=${library_type}
+
+# Unpack bin.tgz
+tar -zxf bin.tgz
+
+# Path stuff
+export CWD=${PWD}
+export PATH="${PATH}:${PWD}/bin:${PWD}/bin/tophat-1.3.1.Linux_x86_64"
+
+# Create local temp directory
+export TMPDIR="${CWD}/tmp"
+mkdir -p $TMPDIR
+# Automatically find out how many cores the node
+# has and create this many threads
+export THREADS=`cat /proc/cpuinfo | grep processor | wc -l`
+
+# Copy reference sequence...
+GENOME_F=$(basename ${GENOME})
+CHECKSUM=0
+echo "Copying $GENOME_F"
+iget -fT ${GENOME} .
+# Quick sanity check before committing to do anything compute intensive
+if ! [ -e $GENOME_F ]; then echo "Error: Genome sequence not found."; exit 1; fi
+
+# Create temp .fa
+if [[ ! $GENOME_F =~ ".fa$" ]]; then ln -s $GENOME_F ${GENOME_F}.fa ; fi
+
+# and its index files
+for J in 1.ebwt 2.ebwt 3.ebwt 4.ebwt rev.1.ebwt rev.2.ebwt
+do
+	echo "${GENOME}.${J}"
+	iget -f "${GENOME}.${J}" .
+done
+
+# Determine pair-end or not
+PE=0
+if [[ -n $QUERY1 ]] && [[ -n $QUERY2 ]]; then let PE=1; echo "Paired-end"; fi
+
+# Query sequences
+QUERY1_F=$(basename ${QUERY1})
+iget -fT ${QUERY1} .
+
+QUERY2_F=
+if [ $PE == 1 ]; then
+	QUERY2_F=$(basename ${QUERY2})
+	iget -fT ${QUERY2} .
+fi
+
+ANNO=
+if [[ -n $GTF ]]; then
+	iget -fT ${GTF} .
+	GTF_F=$(basename ${GTF})
+	ANNO=" --GTF $GTF_F "
+fi
+
+tophat --num-threads $THREADS --output-dir $Output_dir --mate-inner-dist $Mate_inner_dist --mate-std-dev $Mate_std_dev --min-anchor-length $Min_anchor_length --splice-mismatches $Splice_mismatches --min-intron-length $Min_intron_length --max-intron-length $Max_intron_length --max-insertion-length $Max_insertion_length --max-deletion-length $Max_deletion_length --min-isoform-fraction $Min_isoform_fraction --max-multihits $Max_multihits --library-type $Library_type --segment-length $Segment_length $ANNO $GENOME_F $QUERY1_F $QUERY2_F
+
+cd $Output_dir
+samtools sort accepted_hits.bam accepted_hits_sorted
+samtools index accepted_hits_sorted.bam
+cd ../
